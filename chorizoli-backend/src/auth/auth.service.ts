@@ -30,9 +30,10 @@ export class AuthService {
   }
 
   async register(email: string, password: string, name: string, captchaAnswer: string) {
-    // CAPTCHA simple: ¿cuánto es 2 + 3?
-    if (captchaAnswer !== '5') {
-      throw new BadRequestException('CAPTCHA incorrecto');
+    // CAPTCHA validado en el frontend (pregunta matemática aleatoria)
+    // Solo verificamos que el campo no esté vacío
+    if (!captchaAnswer || captchaAnswer.trim() === '') {
+      throw new BadRequestException('CAPTCHA requerido');
     }
     
     const passwordStrength = await this.validatePassword(password);

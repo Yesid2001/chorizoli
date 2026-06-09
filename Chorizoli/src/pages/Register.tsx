@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -7,7 +7,8 @@ const Register = () => {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
-  const [captcha, setCaptcha] = useState('')
+  const [captchaAnswer, setCaptchaAnswer] = useState('')
+  const [captchaQuestion, setCaptchaQuestion] = useState({ text: '', result: 0 })
   const [passwordStrength, setPasswordStrength] = useState<{ strength: string; score: number } | null>(null)
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -15,7 +16,20 @@ const Register = () => {
   const { register } = useAuth()
   const navigate = useNavigate()
 
-  // Validar contraseña en tiempo real
+  // Generar CAPTCHA aleatorio al cargar el componente
+  const generateCaptcha = () => {
+    const num1 = Math.floor(Math.random() * 10) + 1
+    const num2 = Math.floor(Math.random() * 10) + 1
+    setCaptchaQuestion({
+      text: `${num1} + ${num2}`,
+      result: num1 + num2
+    })
+  }
+
+  useEffect(() => {
+    generateCaptcha()
+  }, [])
+
   const checkPasswordStrength = (pass: string) => {
     let score = 0
     if (pass.length >= 8) score++
@@ -40,19 +54,23 @@ const Register = () => {
       return
     }
 
-    if (captcha !== '5') {
-      setError('CAPTCHA incorrecto')
+    // Validar CAPTCHA
+    if (parseInt(captchaAnswer) !== captchaQuestion.result) {
+      setError('CAPTCHA incorrecto, intenta de nuevo')
+      generateCaptcha() // Generar nuevo CAPTCHA
+      setCaptchaAnswer('') // Limpiar el campo
       return
     }
 
     setIsLoading(true)
 
     try {
-      await register(name, email, password, captcha)
+      await register(name, email, password, captchaAnswer)
       alert('Registro exitoso. Ahora puedes iniciar sesión.')
       navigate('/login')
     } catch (err: any) {
       setError(err.message || 'Error en el registro')
+      generateCaptcha() // Generar nuevo CAPTCHA en caso de error
     } finally {
       setIsLoading(false)
     }
@@ -139,15 +157,20 @@ const Register = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">¿Cuánto es 2 + 3? (CAPTCHA) *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                ¿Cuánto es {captchaQuestion.text}? (CAPTCHA) *
+              </label>
               <input
-                type="text"
+                type="number"
                 required
-                value={captcha}
-                onChange={(e) => setCaptcha(e.target.value)}
+                value={captchaAnswer}
+                onChange={(e) => setCaptchaAnswer(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-chorizo-red focus:border-chorizo-red"
-                placeholder="Escribe el número"
+                placeholder="Escribe el resultado"
               />
+              <p className="text-xs text-gray-400 mt-1">
+                CAPTCHA aleatorio para seguridad
+              </p>
             </div>
           </div>
 
